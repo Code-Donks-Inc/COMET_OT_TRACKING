@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# Run the Python pre-push safety checks.
+# Git for Windows includes a compatible shell.
+
+HOOK_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+
+if command -v python >/dev/null 2>&1; then
+    exec python "$HOOK_DIR/pre-push.py"
+elif command -v python3 >/dev/null 2>&1; then
+    exec python3 "$HOOK_DIR/pre-push.py"
+else
+    echo "BLOCKED: Python is required to run pre-push checks." >&2
+    exit 1
+fi
