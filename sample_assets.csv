@@ -1,0 +1,3 @@
+client,asset_tag,vendor,product,model,version,criticality
+Demo Client,PLC-002,Example Automation,Controller OS,Model-A,2.4,High
+Demo Client,HMI-001,Example Visualization,HMI Runtime,Panel-X,1.4.2,Medium

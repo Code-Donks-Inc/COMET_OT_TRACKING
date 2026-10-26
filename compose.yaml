@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: otintel
+      POSTGRES_USER: otintel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      BACKUP_INTERVAL_HOURS: "24"
+      BACKUP_RETENTION_DAYS: "30"
+      BACKUP_ARCHIVE_RENTION_YEARS: "3"
+      BACKUP_ARCHIVE_ENABLED: "false"
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - otintel_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U otintel -d otintel"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+    - "127.0.0.1:8501:8501"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backup-worker:
+    build:
+      context: ./backup_worker
+    restart: "unless-stopped"
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: otintel
+      PGDATABASE: otintel
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      db:
+       condition: service_healthy
+
+volumes:
+  otintel_data:
+    external: true
+    name: c7e7119463292987f7afd7d81b2c897083a44a4f8bdf8f9e8cf36de26c0cc3ef

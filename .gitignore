@@ -1,0 +1,35 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python virtual environments
+.venv/
+venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+
+# PostgreSQL database dumps
+*.dump
+*.sql.gz
+*.backup
+*.pgdump
+
+# Backup and archive storage
+backups/
+*.tar.gz
+*.partial
+
+# Local logs
+*.log
+
+# Editor and operating system files
+.vscode/
+.DS_Store
+Thumbs.dbok
