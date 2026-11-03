@@ -1,18 +1,29 @@
-# OT Vulnerability Intelligence Platform
+# COMET
 
-**Status:** Early development / proof of concept
+**Change Operations, Management, Engineering & Threat Intelligence**
 
-An industrial cybersecurity and change-management platform designed to help organizations understand, track, and manage vulnerabilities and configuration changes across operational technology (OT) environments.
+**Status:** Alpha development / proof of concept
 
-The long-term goal is to provide centralized visibility into industrial assets while preserving a reliable, auditable history of infrastructure changes.
+COMET is an industrial cybersecurity, OT asset intelligence, and change management platform designed to help organizations inventory, monitor, and manage operational technology infrastructure.
 
-## Project Vision
+The platform combines physical asset visibility, vulnerability intelligence, engineering change workflows, and auditable operational records within a centralized management environment.
 
-Industrial environments often contain equipment that cannot be managed using traditional IT security practices. PLCs, VFDs, embedded controllers, industrial gateways, and other OT devices may have limited computing resources, strict uptime requirements, and long operational lifecycles.
+COMET is being developed with particular attention to industrial environments where equipment availability, operational safety, configuration integrity, and accountability are essential.
 
-This project aims to support cybersecurity and operational decision-making without compromising equipment availability or safety.
+### Current Development Status
 
-The platform is being designed to support organizations operating across multiple clients, facilities, buildings, cabinets, and individual assets.
+The current development environment includes:
+
+- A containerized Python, Streamlit, and PostgreSQL application.
+- Client, site, building, cabinet, and asset inventory structures.
+- Microsoft Entra ID authentication and identity validation.
+- An asset assignment request preview and confirmation interface.
+- Platform backup infrastructure and supporting operational records.
+- Draft engineering approval, audit, and authorization designs.
+
+**Security and release restrictions:** Client-specific authorization, restricted PostgreSQL application privileges, and engineering approval enforcement remain under development. Asset assignment request submission and approval are disabled. Migration 003 has not been applied.
+
+COMET is not yet approved for production deployment.
 
 ## Planned Capabilities
 
@@ -78,13 +89,17 @@ Planned considerations include role-based access, approval permissions, tenant i
 
 ## Current Technology Stack
 
-- **Python** — application and background processing
-- **Streamlit** — application interface
-- **PostgreSQL** — relational data storage
-- **Docker Compose** — local service orchestration
-- **Git and GitHub** — version control and collaboration
+- **Python** - Application logic and background processing
+- **Streamlit** - Web application interface
+- **PostgreSQL** - Relational data storage and audit records
+- **Docker Compose** - Local service orchestration
+- **Microsoft Entra ID** - Organizational authentication using OpenID Connect
+- **Authlib** - OAuth 2.0 and OpenID Connect integration
+- **Git and GitHub** - Version control and collaboration
 
 The architecture and technology stack may evolve as development progresses.
+
+**Authentication status:** Microsoft Entra ID authentication is operational in the development environment. Role-based authorization, client-specific access enforcement, and restricted database privileges are not yet implemented.
 
 ## Development Roadmap
 
