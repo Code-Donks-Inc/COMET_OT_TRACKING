@@ -1,0 +1,37 @@
+COMET — Authorization Implementation Plan
+Status: ALPHA DEVELOPMENT
+
+Phase 1 — Identity
+[COMPLETE] Microsoft Entra ID authentication
+[COMPLETE] Tenant ID and Object ID validation
+
+Phase 2 — Authorization Data Model
+[ ] Define application users using tid + oid
+[ ] Define client membership
+[ ] Define role assignments scoped to clients
+[ ] Define engineering approval permissions
+
+Phase 3 — Database Security
+[ ] Create restricted PostgreSQL application role
+[ ] Separate migration and approval privileges
+[ ] Enforce client isolation at the database boundary
+[ ] Review privileged functions and triggers
+
+Phase 4 — Application Enforcement
+[ ] Deny unauthorized client access
+[ ] Validate permissions for every protected operation
+[ ] Prevent self-approval
+[ ] Record authenticated requester and reviewer identities
+
+Phase 5 — Security Testing
+[ ] Test unauthorized client access
+[ ] Test role privilege escalation
+[ ] Test cross-client assignment requests
+[ ] Test self-approval prevention
+[ ] Test audit integrity
+
+Release Restrictions:
+- Migration 003 must remain unapplied until security review.
+- Asset assignment submission remains disabled.
+- Engineering approval remains disabled.
+- Authentication alone does not authorize access.

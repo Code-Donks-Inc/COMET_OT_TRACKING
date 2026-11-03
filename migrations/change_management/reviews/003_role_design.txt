@@ -1,0 +1,185 @@
+# MIGRATION 003 — DATABASE ROLE DESIGN
+
+Document Status: IN DEVELOPMENT
+Migration Status: NOT APPLIED
+Security Review Status: OPEN
+
+## Purpose
+
+Define the proposed separation of PostgreSQL responsibilities for the OT Asset Intelligence application.
+
+This document describes the intended architecture. It does not authorize deployment or changes to existing database privileges.
+
+## Proposed Database Roles
+
+**1. otintel_app — Application Runtime**
+
+- Restricted, non-superuser database account.
+- Performs approved day-to-day application operations.
+- Does not own protected database objects.
+- Cannot directly modify asset cabinet assignments.
+- Cannot directly approve or reject assignment requests.
+- Cannot directly modify audit events or revision history.
+- Requires authenticated, client-scoped application access.
+
+**2. otintel_migrator — Migration Deployment**
+
+- Dedicated role for controlled schema migrations.
+- Creates or modifies database objects only through approved deployment procedures.
+- Does not serve as the application runtime account.
+- Must not have unnecessary administrative privileges.
+
+**3. otintel_approval_owner — Controlled Function Owner**
+
+- Dedicated non-superuser role.
+- Owns security-sensitive approval functions.
+- Receives only the database privileges necessary for controlled decisions.
+- Must not be usable as an ordinary application login.
+- Must not grant unrestricted access to protected tables.
+
+**4. otintel — Existing Development Administrator**
+
+- Currently owns the development database and has superuser privileges.
+- Must not remain the application's production runtime identity.
+- Administrative access requires separate controls.
+
+## Trusted Application Identity
+
+Database role separation does not establish individual user identity.
+
+Before enabling assignment decisions, the application must provide:
+
+- Authenticated user identities.
+- Client-scoped authorization.
+- Independent reviewer authorization.
+- Protection against reviewer impersonation.
+- Enforcement of separation of duties.
+
+## Deployment Restrictions
+
+No proposed role has been created or configured.
+
+No PostgreSQL privileges have been changed.
+
+Migration 003 remains IN DEVELOPMENT — NOT APPLIED.
+
+Assignment decisions remain disabled.
+
+## Review Status
+
+OPEN — DESIGN AND TESTING REQUIRED
+
+## ROLE 006 - BACKUP WORKER
+
+Proposed role: otintel_backup_worker
+
+Purpose:
+- Process authorized backup jobs.
+- Read required backup job and archive metadata.
+- Create scheduled backup requests.
+- Update backup job execution status.
+
+Security requirements:
+- Separate from otintel_app.
+- Non-superuser with no role or database creation privileges.
+- No asset assignment approval permissions.
+- No unnecessary inventory modification permissions.
+- Backup file access and database backup privileges require
+  separate review.
+- Manual backup requests require an authenticated,
+  authorized application workflow.
+- Backup request frequency and resource limits require review.
+
+Status: DESIGN ONLY - NOT IMPLEMENTED
+
+
+
+## AUTHENTICATION DESIGN 001 - TRUSTED USER IDENTITY
+
+Proposed architecture:
+- Users authenticate through a trusted identity provider.
+- Each user has a stable, unique identifier.
+- The application validates the authenticated session.
+- User permissions are associated with specific clients.
+- Request submission requires client-level authorization.
+- Assignment approval requires separate reviewer authorization.
+- Reviewers cannot approve their own requests.
+
+Database security:
+- otintel_app uses restricted database credentials.
+- Client selection is not an authorization mechanism.
+- Caller-supplied usernames are not trusted identities.
+- Database operations must enforce authorization boundaries.
+- Approval functions remain disabled until identity and
+  authorization enforcement are implemented and tested.
+
+Implementation decisions still required:
+- Identity provider and authentication protocol.
+- User-to-client authorization data model.
+- Trusted identity propagation to database operations.
+- Session expiration and revocation handling.
+- Authorization and impersonation regression tests.
+
+Status: DESIGN ONLY - NOT IMPLEMENTED
+
+## AUTHORIZATION DESIGN 002 - CLIENT MEMBERSHIPS
+
+Purpose:
+- Restrict application operations to authorized clients.
+- Separate ordinary asset access from assignment approval.
+
+Proposed data model:
+- users: stable internal user ID and external identity reference.
+- client_memberships: user ID, client ID, and membership status.
+- client_permissions: membership-specific permissions for
+  viewing assets, submitting requests, and reviewing requests.
+
+Required controls:
+- Every operation must verify active client membership.
+- Client selection must never grant access by itself.
+- Request submission requires explicit authorization.
+- Approval requires separate reviewer authorization.
+- Reviewers must not approve their own requests.
+- Authorization must be enforced server-side.
+- Database permissions must prevent bypassing these checks.
+- Membership changes must be auditable.
+
+Implementation decisions still required:
+- Exact table definitions and constraints.
+- Permission representation and role hierarchy.
+- Trusted identity mapping to internal users.
+- Authorization enforcement mechanism.
+- Membership revocation and regression testing.
+
+Status: DESIGN ONLY - NOT IMPLEMENTED
+
+## AUTHORIZATION DESIGN 002 - CLIENT MEMBERSHIPS
+
+Purpose:
+- Restrict application operations to authorized clients.
+- Separate ordinary asset access from assignment approval.
+
+Proposed data model:
+- users: stable internal user ID and external identity reference.
+- client_memberships: user ID, client ID, and membership status.
+- client_permissions: membership-specific permissions for
+  viewing assets, submitting requests, and reviewing requests.
+
+Required controls:
+- Every operation must verify active client membership.
+- Client selection must never grant access by itself.
+- Request submission requires explicit authorization.
+- Approval requires separate reviewer authorization.
+- Reviewers must not approve their own requests.
+- Authorization must be enforced server-side.
+- Database permissions must prevent bypassing these checks.
+- Membership changes must be auditable.
+
+Implementation decisions still required:
+- Exact table definitions and constraints.
+- Permission representation and role hierarchy.
+- Trusted identity mapping to internal users.
+- Authorization enforcement mechanism.
+- Membership revocation and regression testing.
+
+Status: DESIGN ONLY - NOT IMPLEMENTED

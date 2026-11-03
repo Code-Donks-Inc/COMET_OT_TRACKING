@@ -191,7 +191,7 @@ def validate_monthly_archive_symlinks(archive_path):
     return True
 
 def open_monthly_archive_safely(archive_path):
-    """Open an existing monthly archive using secure diretory descriptors"""
+    """Open an existing monthly archive using secure directory descriptors"""
     return open_monthly_archive_by_descriptor(archive_path)
        
 #-----------------BACKUP RETENTION FUNCTIONS--------------

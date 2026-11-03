@@ -1,0 +1,44 @@
+COMET — Authorization Design
+Status: ALPHA DESIGN — NOT ENFORCED
+
+Identity Provider:
+Microsoft Entra ID
+
+Primary User Identity:
+Tenant ID (tid) + Object ID (oid)
+
+Proposed Application Roles:
+
+1. Platform Administrator
+   - Manage platform configuration and user access
+   - No automatic authority to approve engineering changes
+
+2. Client Administrator
+   - Manage authorized users within assigned clients
+   - Access only explicitly assigned clients
+
+3. OT Engineer
+   - View authorized client assets
+   - Create asset assignment requests
+   - Cannot approve their own requests
+
+4. Engineering Approver
+   - Review requests for authorized clients
+   - Approve or reject permitted engineering changes
+   - Cannot approve their own requests
+
+5. Read-Only Auditor
+   - View authorized assets and change history
+   - Cannot create, approve, or modify requests
+
+Authorization Requirements:
+- Deny access by default.
+- Validate client membership on every protected operation.
+- Enforce permissions server-side.
+- Enforce separation of requester and approver.
+- Use restricted PostgreSQL roles.
+- Record authorization-relevant actions in audit logs.
+- Do not trust browser-supplied identity or role values.
+
+Implementation Status:
+DESIGN ONLY — NO AUTHORIZATION ENFORCEMENT ENABLED

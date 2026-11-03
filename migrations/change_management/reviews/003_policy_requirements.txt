@@ -1,0 +1,409 @@
+OT ASSET INTELLIGENCE PLATFORM
+MIGRATION 003 - SECURITY POLICY REQUIREMENTS
+============================================
+
+DOCUMENT INFORMATION
+--------------------
+Migration: 003_asset_assignment_requests.sql
+Document Type: Security Policy and Implementation Requirements
+Document Status: IN DEVELOPMENT
+Migration Status: NOT APPLIED
+
+PURPOSE
+-------
+This document establishes the security, authorization,
+database permission, audit, and change-control requirements
+for Migration 003.
+
+Migration 003 introduces controlled asset cabinet assignment
+requests, independent review, approval or rejection, audit
+events, and configuration revision history.
+
+These requirements define the controls that must be implemented
+and verified before the migration is approved for deployment.
+
+This document records required behavior. It does not establish
+that the controls have been implemented or tested.
+
+Related documents:
+- 003_security_review.txt
+- 003_approval_workflow.txt
+
+
+POLICY 001 - TRUSTED REVIEWER IDENTITY
+-------------------------------------
+
+Purpose:
+Ensure assignment decisions are performed by authenticated,
+authorized individuals.
+
+Source:
+Security Requirements and Trusted Reviewer Identity Requirements.
+
+Context:
+Application-supplied usernames cannot independently establish
+the identity or authorization of a reviewer.
+
+Requirements:
+1. Users must authenticate before submitting or reviewing requests.
+2. Each user must have a stable, unique identity.
+3. Reviewer identity must originate from a trusted authentication
+   context.
+4. Caller-supplied reviewer names must not be accepted as proof
+   of identity.
+5. Reviewer authorization must be scoped to the request's client.
+6. Reviewers must not approve their own requests.
+7. The database approval function must use a verified identity
+   established by a trusted authentication and authorization layer.
+8. Application database roles must not be able to impersonate
+   reviewers or bypass approval checks.
+9. Assignment decisions must remain disabled until these
+   requirements are enforced.
+
+Status:
+NOT IMPLEMENTED
+
+
+POLICY 002 - DATABASE PERMISSIONS
+---------------------------------
+
+Purpose:
+Prevent application accounts from bypassing the controlled
+asset assignment workflow.
+
+Source:
+Database Permission Requirements.
+
+Context:
+Database permissions must enforce restrictions independently
+of the application's interface controls.
+
+Requirements:
+1. The application must use a restricted PostgreSQL role.
+2. Application roles must not own protected database tables.
+3. Application roles must not directly update assignment requests.
+4. Application roles must not directly modify asset cabinet
+   assignments.
+5. Application roles must not directly insert configuration
+   revisions.
+6. Application roles must not directly insert, update, or
+   delete audit events outside authorized database operations.
+7. Approval functions must execute with only required privileges.
+8. Only authorized application roles may execute approval functions.
+9. Application roles must not alter security triggers or functions.
+10. Database administrators must use separately controlled accounts.
+11. Approval decisions must not be available through unrestricted
+    table UPDATE operations.
+
+Status:
+NOT IMPLEMENTED - TESTING REQUIRED
+
+
+POLICY 003 - APPROVAL FUNCTION OWNERSHIP
+---------------------------------------
+
+Purpose:
+Prevent privilege escalation through database functions
+responsible for controlled assignment decisions.
+
+Source:
+Approval Function Ownership Requirements.
+
+Context:
+Privileged database functions require controlled ownership,
+object resolution, and execution permissions.
+
+Requirements:
+1. The approval function must not be owned by the application role.
+2. The function owner must have only the required privileges.
+3. The function owner must not be a PostgreSQL superuser.
+4. The function must use a controlled search_path.
+5. All referenced application tables must be schema-qualified.
+6. Untrusted roles must not be able to replace the function.
+7. EXECUTE must be granted only to authorized database roles.
+8. SECURITY DEFINER must not be enabled until these controls
+   have been implemented and tested.
+
+Status:
+PARTIALLY IMPLEMENTED - NOT TESTED
+
+Implementation Notes:
+The migration includes a proposed controlled search_path and
+a statement revoking function execution from PUBLIC.
+
+Migration 003 has not been executed.
+
+
+POLICY 004 - SCHEMA PERMISSIONS
+-------------------------------
+
+Purpose:
+Prevent unauthorized creation or replacement of database
+objects used by security-sensitive functions.
+
+Source:
+Schema Permission Requirements.
+
+Context:
+Schema privileges and object privileges must be reviewed
+separately before implementing database authorization.
+
+Requirements:
+1. Application roles must not have CREATE privileges on
+   the public schema.
+2. Application roles must not own the public schema.
+3. Only authorized migration roles may create or replace
+   security-sensitive database functions.
+4. The approval function must not depend on objects created
+   in schemas writable by untrusted roles.
+5. Schema USAGE and object privileges must be reviewed separately.
+6. Existing privileges must be inspected before applying
+   GRANT or REVOKE statements.
+
+Status:
+PARTIALLY REVIEWED - NOT IMPLEMENTED
+
+Implementation Notes:
+The public schema grants USAGE but not CREATE to PUBLIC.
+The existing otintel role owns the database and is a superuser.
+
+
+POLICY 005 - DATABASE ROLE SEPARATION
+-------------------------------------
+
+Purpose:
+Separate application runtime operations from database
+administration and migration deployment.
+
+Source:
+Database Role Separation Requirements.
+
+Context:
+The current development database account has privileges
+that exceed the requirements of an application runtime role.
+
+Requirements:
+1. The application must not connect as the database owner.
+2. Database migrations must use a separate privileged role.
+3. Runtime application roles must follow least privilege.
+4. Runtime roles must not have CREATEDB, CREATEROLE,
+   SUPERUSER, or BYPASSRLS privileges.
+5. Runtime roles must not own security-sensitive tables.
+6. Runtime roles must not disable security triggers.
+7. Approval execution privileges must be granted explicitly.
+8. Database credentials must be stored securely.
+
+Status:
+NOT IMPLEMENTED
+
+Implementation Notes:
+Current development role: otintel
+Current database owner: otintel
+Proposed restricted runtime role: otintel_app
+
+Production role separation has not been implemented.
+
+
+POLICY 006 - BACKUP AUTHORIZATION
+---------------------------------
+
+Purpose:
+Separate database backup administration from ordinary
+inventory management activities.
+
+Source:
+Backup Authorization Requirements.
+
+Context:
+The current application can submit manual backup requests
+through public.backup_jobs.
+
+A separate backup worker processes backup requests.
+
+Requirements:
+1. Inventory permissions must not automatically grant
+   permission to initiate database backups.
+2. Backup requests must require an authorized identity.
+3. Backup execution must remain restricted to the dedicated
+   backup worker.
+4. Application users must not directly access backup archive
+   storage or database credentials.
+5. Backup request activity must be auditable.
+6. Backup authorization must be enforced server-side,
+   not only through Streamlit interface controls.
+7. Backup submission privileges must be separated from
+   ordinary inventory management privileges.
+
+Status:
+NOT IMPLEMENTED
+
+
+POLICY 007 - CONTROLLED ASSIGNMENT DECISIONS
+-------------------------------------------
+
+Purpose:
+Ensure asset cabinet assignment changes occur only through
+an authorized, consistent, and auditable workflow.
+
+Source:
+Asset Assignment Security Guide and Approval Transaction
+Sequence Guide.
+
+Context:
+Assignment approval must coordinate changes to the request,
+affected asset, configuration revision, and audit history.
+
+Requirements:
+1. Verify the assignment request exists and is pending.
+2. Lock the assignment request against concurrent changes.
+3. Authenticate and authorize the reviewer.
+4. Enforce separation of duties.
+5. Lock the affected asset against concurrent changes.
+6. Verify the asset belongs to the request's client.
+7. Verify the asset's current cabinet matches the original
+   cabinet recorded in the request.
+8. Verify the proposed cabinet belongs to the same client.
+9. Record the approval or rejection decision.
+10. Approved requests must update the asset cabinet assignment.
+11. Approved requests must create the matching immutable
+    configuration revision.
+12. Approved requests must create the corresponding
+    append-only approval audit event.
+13. Rejected requests must not modify the asset assignment.
+14. Rejected requests must not create configuration revisions.
+15. Rejected requests must create a rejection audit event.
+16. All changes belonging to a decision must occur within
+    one database transaction.
+17. Any failure must roll back the entire decision.
+18. Application roles must not bypass the controlled workflow.
+19. Decisions must remain disabled until authorization and
+    transaction validation are complete.
+
+Status:
+PARTIALLY IMPLEMENTED - DECISIONS DISABLED
+
+
+POLICY 008 - CONFIGURATION REVISION CONTROL
+-------------------------------------------
+
+Purpose:
+Preserve an immutable record of approved asset cabinet
+assignment changes.
+
+Source:
+Revision Guide.
+
+Context:
+Configuration revisions provide a historical record of
+approved changes to asset assignments.
+
+Requirements:
+1. Only the authorized approval workflow may insert revisions.
+2. The pending request and affected asset must be locked.
+3. The asset's current cabinet must match original_cabinet_id.
+4. The proposed cabinet must belong to the same client.
+5. The reviewer must be authenticated and authorized.
+6. Separation of duties must be enforced.
+7. The request must be marked approved.
+8. The asset's cabinet assignment must be updated.
+9. The matching configuration revision must be inserted.
+10. The corresponding approval audit event must be inserted.
+11. Approval status, asset update, revision creation, and
+    audit event creation must occur atomically.
+12. Any failure must roll back the entire transaction.
+13. Application roles must not have unrestricted INSERT
+    access to asset_assignment_revisions.
+
+Status:
+PARTIALLY IMPLEMENTED - WORKFLOW INCOMPLETE
+
+
+POLICY 009 - AUDIT EVENT CONSISTENCY
+------------------------------------
+
+Purpose:
+Ensure asset cabinet assignment requests and decisions
+produce complete, consistent, and protected audit records.
+
+Source:
+Audit Event Consistency Guide and Approval Workflow Guide.
+
+Context:
+Assignment audit events provide a historical record of
+request submission, approval, and rejection activities.
+
+Migration 003 proposes an append-only event table,
+event uniqueness constraints, and triggers that prevent
+UPDATE and DELETE operations.
+
+These controls do not independently guarantee that every
+request or completed decision has a corresponding audit
+event.
+
+Requirements:
+1. Every successfully submitted assignment request must
+   produce a corresponding submitted audit event.
+2. Every approved assignment request must produce a
+   corresponding approved audit event.
+3. Every rejected assignment request must produce a
+   corresponding rejected audit event.
+4. Audit events must reference an existing assignment
+   request.
+5. Audit event types must be restricted to submitted,
+   approved, and rejected.
+6. Duplicate events of the same type for one request
+   must be prohibited.
+7. A request must not have both approved and rejected
+   decision events.
+8. Audit events must identify the individual responsible
+   for the recorded action.
+9. Actor identity must originate from a trusted
+   authentication and authorization context.
+10. Audit event timestamps must be recorded consistently
+    and must not be supplied as unverified evidence of
+    when an action occurred.
+11. Audit events must be created within the same database
+    transaction as the corresponding request submission
+    or assignment decision.
+12. Failure to create a required audit event must roll
+    back the entire associated transaction.
+13. Approved requests must have a matching configuration
+    revision and approval audit event.
+14. Rejected requests must not produce configuration
+    revisions or modify asset cabinet assignments.
+15. Audit event records must not be updated or deleted
+    through ordinary application operations.
+16. Application roles must not have unrestricted INSERT,
+    UPDATE, or DELETE privileges on audit events.
+17. Audit event creation must be restricted to authorized
+    database operations.
+18. Request status and audit event consistency must be
+    validated through database-level testing.
+19. Audit protections must account for privileged database
+    operations that can bypass ordinary trigger controls.
+20. Assignment decisions must remain disabled until audit
+    consistency and authorization controls are implemented
+    and verified.
+
+Status:
+PARTIALLY IMPLEMENTED - CONSISTENCY NOT VERIFIED
+
+Implementation Notes:
+Migration 003 includes proposed audit event type checks,
+uniqueness constraints, and an append-only protection
+trigger.
+
+The migration does not yet enforce the creation of a
+submitted event for every new assignment request.
+
+The approval and rejection transaction workflows are
+incomplete and do not yet guarantee corresponding
+decision audit events.
+
+Trusted actor identity, restricted application database
+permissions, and audit consistency testing have not
+been implemented.
+
+Migration 003 has not been executed.
+
+Assignment decisions remain disabled.

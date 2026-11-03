@@ -1,0 +1,256 @@
+OT ASSET INTELLIGENCE PLATFORM
+DATABASE MIGRATION REGISTRY
+========================================
+
+DOCUMENT STATUS
+---------------
+Version: 0.1
+Status: Initial team documentation draft
+Scope: Migrations 001, 002, and 003
+
+This registry documents the currently known migration history.
+Actual deployment state should be checked against PostgreSQL
+before any new team member performs database changes.
+
+PURPOSE
+-------
+This document provides team members with a centralized reference
+for database migrations in the OT Asset Intelligence Platform.
+
+Each migration must document:
+- Its purpose and responsibility.
+- The database objects it creates or modifies.
+- Dependencies on previous migrations.
+- Its implementation and deployment status.
+- Any security considerations or operational restrictions.
+
+This registry is maintained alongside the migration SQL files
+and must be updated whenever a migration is introduced or changed.
+
+TEAM RULES
+----------
+1. Each migration must have a unique identifier.
+2. Migration files must be stored in version control.
+3. Applied migrations must not be silently rewritten.
+4. Every migration must have a documented purpose.
+5. Dependencies must be identified before deployment.
+6. Schema changes must be reviewed before execution.
+7. Security-sensitive changes require additional review.
+8. Database backups must be verified before deployment.
+9. Migration testing must occur before production approval.
+10. Deployment status must identify the target environment.
+11. Never assume a migration is applied solely because its
+    SQL file exists.
+12. Future migrations must be added to this registry.
+
+MIGRATION NAMING CONVENTIONS
+----------------------------
+Standard format:
+NNN_short_descriptive_name.sql
+
+Examples:
+004_asset_document_references.sql
+005_user_access_roles.sql
+006_asset_change_history.sql
+
+Rules:
+1. Use a three-digit sequential migration number.
+2. Use lowercase letters and underscores.
+3. Use descriptive names that explain the database change.
+4. Never reuse a migration number.
+5. Never rename a migration that has already been applied.
+6. Never modify an applied migration to introduce new changes.
+7. Create a new migration for changes to existing structures.
+8. Keep migration numbering unique across all subdirectories.
+9. Record every new migration in MIGRATION_REGISTRY.txt.
+10. Do not execute a migration until its dependencies are met.
+
+Existing migrations:
+001_asset_locations.sql
+002_asset_cabinet_assignment.sql
+003_asset_assignment_requests.sql
+
+Next available migration number:
+004
+
+These conventions apply to future migrations.
+Existing migration files will not be renamed.
+
+MIGRATION DIRECTORY STRUCTURE
+-----------------------------
+
+Current project structure:
+
+migrations/
+    MIGRATION_REGISTRY.txt
+    001_asset_locations.sql
+    002_asset_cabinet_assignment.sql
+    test_002_client_isolation.sql
+
+    change_management/
+        003_asset_assignment_requests.sql
+
+
+Directory responsibilities:
+
+migrations/
+    Central location for database migration files
+    and migration documentation.
+
+migrations/change_management/
+    Migrations related to controlled changes,
+    approvals, audit events, and revision history.
+
+
+Future organization:
+
+Additional subdirectories may be introduced for
+distinct database responsibilities.
+
+Examples:
+    migrations/security/
+    migrations/documents/
+    migrations/integrations/
+
+
+Team requirements:
+
+1. Migration numbers must remain globally unique.
+2. Each migration must be recorded in the registry.
+3. The registry must contain the complete relative path.
+4. Tests must identify the migration they validate.
+5. Existing applied migrations must not be moved or renamed.
+6. Directory organization must not determine execution order.
+7. Migration dependencies determine execution order.
+8. New directories require team review before adoption.
+
+
+Current implementation status:
+Directory structure is partially established.
+Future directories are proposals, not existing components.
+
+TEAM MIGRATION STATUS DEFINITIONS
+---------------------------------
+PLANNED:
+Requirements identified; implementation has not started.
+
+IN DEVELOPMENT:
+SQL is being written or reviewed. Not approved for deployment.
+
+READY FOR TEST:
+Implementation is complete enough for isolated testing.
+
+TESTED:
+Required tests have passed in a controlled environment.
+
+APPROVED:
+Reviewed and authorized for the specified deployment.
+
+APPLIED:
+Executed successfully in the named database environment.
+
+BLOCKED:
+Cannot proceed until a documented issue is resolved.
+
+RETIRED:
+No longer used for new deployments; retained for history.
+
+MIGRATION 001
+-------------
+File: migrations/001_asset_locations.sql
+
+Purpose:
+Establish the physical location hierarchy used to organize
+industrial assets.
+
+Role:
+Provides the foundation for organizing equipment by client,
+site, building, and cabinet.
+
+Database objects:
+- public.sites
+- public.buildings
+- public.cabinets
+- Client-isolation foreign keys and uniqueness constraints
+
+Dependencies:
+- Existing public.clients table
+
+Status:
+APPLIED - Local development database
+Previously verified.
+
+Security considerations:
+The hierarchy enforces relational consistency between clients
+and their physical locations. It does not independently enforce
+user authorization.
+
+
+MIGRATION 002
+-------------
+File: migrations/002_asset_cabinet_assignment.sql
+
+Purpose:
+Allow existing asset records to reference physical cabinets.
+
+Role:
+Connects asset inventory records to the location hierarchy.
+
+Database changes:
+- Adds cabinet_id to public.assets
+- Adds a composite foreign key to enforce client consistency
+
+Dependencies:
+- Migration 001
+- Existing public.assets table
+
+Status:
+APPLIED - Local development database
+Client-isolation regression test previously passed.
+
+Related test:
+migrations/test_002_client_isolation.sql
+
+Security considerations:
+The database prevents cross-client cabinet relationships.
+It does not determine which users may assign assets.
+
+
+MIGRATION 003
+-------------
+File: migrations/change_management/003_asset_assignment_requests.sql
+
+Purpose:
+Introduce controlled, auditable requests for changing asset
+cabinet assignments.
+
+Role:
+Establishes the database foundation for a change-management
+workflow involving request submission, independent review,
+approval or rejection, and assignment revision history.
+
+Planned database objects:
+- public.asset_assignment_requests
+- public.asset_assignment_events
+- public.asset_assignment_revisions
+- Validation and protection triggers
+- public.decide_asset_assignment() approval function
+
+Dependencies:
+- Migration 001
+- Migration 002
+- Existing assets, clients, and cabinets
+
+Status:
+IN DEVELOPMENT - NOT APPLIED
+
+Security considerations:
+- Reviewer identity and authorization are not implemented.
+- The approval function intentionally rejects decisions.
+- Database role separation is not implemented.
+- The existing development database role has superuser privileges.
+- Approval transactions and security tests are incomplete.
+
+Deployment restriction:
+DO NOT EXECUTE until security design, migration review,
+backup verification, and regression testing are complete.

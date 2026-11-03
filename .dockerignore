@@ -1,0 +1,20 @@
+# Authentication credentials
+.streamlit/secrets.toml
+.env
+.env.*
+
+# Python virtual environments and caches
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Git metadata
+.git/
+.gitignore
+
+# Local database backups
+backups/
+
+# Local development files
+.pytest_cache/

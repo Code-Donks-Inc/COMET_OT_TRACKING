@@ -22,6 +22,8 @@ services:
   app:
     build: .
     restart: unless-stopped
+    volumes:
+     - ./.streamlit/secrets.toml:/app/.streamlit/secrets.toml:ro
     environment:
       DB_HOST: db
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}

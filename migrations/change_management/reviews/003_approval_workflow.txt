@@ -1,0 +1,193 @@
+OT ASSET INTELLIGENCE PLATFORM
+MIGRATION 003 - APPROVAL WORKFLOW
+========================================
+
+DOCUMENT INFORMATION
+--------------------
+Migration: 003_asset_assignment_requests.sql
+Document Type: Change Management Workflow Design
+Document Status: IN DEVELOPMENT
+Migration Status: NOT APPLIED
+
+PURPOSE
+-------
+This document describes the required database transaction
+sequence for approving or rejecting asset cabinet assignment
+requests.
+
+It provides developers and reviewers with an implementation
+reference for the controlled approval workflow.
+
+Security requirements are defined separately in:
+003_policy_requirements.txt
+
+Security findings are documented in:
+003_security_review.txt
+
+This workflow is a design specification, not an indication
+that assignment decisions are currently operational.
+
+
+WORKFLOW 001 - APPROVAL TRANSACTION
+-----------------------------------
+
+Purpose:
+Apply an authorized asset cabinet assignment change while
+preserving configuration history and audit records.
+
+Preconditions:
+- The assignment request exists.
+- The request is pending.
+- The reviewer is authenticated and authorized.
+- The reviewer is not the original requester.
+- The asset belongs to the request's client.
+- The proposed cabinet belongs to the same client.
+
+Transaction Sequence:
+1. Begin a database transaction.
+2. Lock the assignment request row.
+3. Confirm the request is pending.
+4. Verify the authenticated reviewer's authorization.
+5. Enforce separation of duties.
+6. Lock the affected asset row.
+7. Confirm the asset belongs to the request's client.
+8. Confirm the asset's current cabinet matches
+   original_cabinet_id.
+9. Confirm the proposed cabinet belongs to the same client.
+10. Update the request status and reviewer information.
+11. Update the asset's cabinet assignment.
+12. Insert the immutable configuration revision.
+13. Insert the approval audit event.
+14. Commit only if every operation succeeds.
+
+Failure Handling:
+Any failure must roll back the entire transaction.
+
+Status:
+PARTIALLY IMPLEMENTED - APPROVAL DISABLED
+
+
+WORKFLOW 002 - REJECTION TRANSACTION
+------------------------------------
+
+Purpose:
+Reject an assignment request without changing the asset's
+physical location record.
+
+Preconditions:
+- The assignment request exists.
+- The request is pending.
+- The reviewer is authenticated and authorized.
+- Separation of duties is enforced.
+
+Transaction Sequence:
+1. Begin a database transaction.
+2. Lock the assignment request row.
+3. Confirm the request is pending.
+4. Verify reviewer authorization.
+5. Enforce separation of duties.
+6. Record the rejection and reviewer information.
+7. Insert the rejection audit event.
+8. Commit only if every operation succeeds.
+
+Restrictions:
+- Do not modify the asset's cabinet assignment.
+- Do not create a configuration revision.
+- Do not create an approval audit event.
+
+Failure Handling:
+Any failure must roll back the entire transaction.
+
+Status:
+NOT IMPLEMENTED
+
+
+WORKFLOW 003 - CONFIGURATION REVISION
+-------------------------------------
+
+Purpose:
+Preserve an immutable record of an approved assignment change.
+
+Requirements:
+1. Only the authorized approval workflow may insert revisions.
+2. The request and affected asset must be locked.
+3. The original cabinet assignment must be verified.
+4. The proposed cabinet must belong to the same client.
+5. The reviewer must be authenticated and authorized.
+6. Separation of duties must be enforced.
+7. The request must be marked approved.
+8. The asset cabinet assignment must be updated.
+9. The matching configuration revision must be inserted.
+10. The corresponding approval audit event must be inserted.
+
+Transaction Requirements:
+The request decision, asset update, revision insertion, and
+audit event insertion must occur atomically.
+
+Any failure must roll back the entire transaction.
+
+Status:
+PARTIALLY IMPLEMENTED - WORKFLOW INCOMPLETE
+
+
+WORKFLOW 004 - AUDIT EVENT CONSISTENCY
+--------------------------------------
+
+Purpose:
+Ensure every request and decision produces a consistent
+and attributable audit history.
+
+Requirements:
+1. Every new assignment request must generate one
+   submitted event.
+2. A pending request must not generate a decision event.
+3. An approved request must generate one approved event.
+4. A rejected request must generate one rejected event.
+5. A request must never have both approved and rejected events.
+6. Decision events must identify the authorized reviewer.
+7. Submitted events must identify the original requester.
+8. Event creation and corresponding status changes must occur
+   within the same database transaction.
+
+Status:
+PARTIALLY IMPLEMENTED - CONSISTENCY NOT VERIFIED
+
+
+WORKFLOW 005 - ACCESS CONTROL BOUNDARY
+--------------------------------------
+
+Purpose:
+Prevent direct database operations from bypassing the
+controlled approval workflow.
+
+Requirements:
+1. Application roles must not directly update assignment
+   request decisions.
+2. Application roles must not directly update asset cabinet
+   assignments.
+3. Application roles must not insert revisions outside the
+   authorized approval workflow.
+4. Application roles must not directly insert, update, or
+   delete audit events outside authorized database operations.
+5. Approval functions must be separately authorized.
+6. All reviewer identity and client authorization checks
+   must be enforced before decisions are enabled.
+
+Status:
+NOT IMPLEMENTED
+
+
+OVERALL WORKFLOW STATUS
+-----------------------
+Migration Status: IN DEVELOPMENT - NOT APPLIED
+Approval Workflow: DISABLED
+Rejection Workflow: NOT IMPLEMENTED
+Authorization: NOT IMPLEMENTED
+Transaction Validation: INCOMPLETE
+
+Deployment Restriction:
+Do not enable approval decisions until the implementation,
+authorization, transaction consistency, and regression tests
+have been completed and approved.
+
+END OF APPROVAL WORKFLOW

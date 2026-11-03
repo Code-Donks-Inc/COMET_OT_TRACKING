@@ -1,0 +1,466 @@
+OT ASSET INTELLIGENCE PLATFORM
+MIGRATION 003 - SECURITY REVIEW
+========================================
+
+DOCUMENT INFORMATION
+--------------------
+Migration: 003_asset_assignment_requests.sql
+Migration Status: IN DEVELOPMENT - NOT APPLIED
+Document Type: Security and Database Access Review
+Document Status: IN DEVELOPMENT
+Proposed Application Role: otintel_app
+
+
+PURPOSE
+-------
+This document records the security findings, database access
+requirements, and proposed permission controls associated with
+Migration 003.
+
+Migration 003 introduces the database foundation for controlled
+asset cabinet assignment changes, including request submission,
+independent review, approval or rejection, audit events, and
+assignment revision history.
+
+The purpose of this review is to identify security risks in the
+current development environment and establish the requirements
+that must be addressed before the migration is approved.
+
+This document also provides a reference for developers and
+reviewers responsible for implementing database authorization,
+application permissions, and security controls.
+
+The findings documented here do not constitute security approval.
+Proposed controls must be implemented, tested, and reviewed
+before deployment.
+
+
+REVIEW 001 - CURRENT DATABASE ROLE PRIVILEGES
+---------------------------------------------
+
+Purpose:
+Evaluate the privileges assigned to the current PostgreSQL
+database account.
+
+Source:
+PostgreSQL role attributes for otintel.
+
+Findings:
+The otintel database role is a PostgreSQL superuser.
+
+Verified privileges:
+- SUPERUSER = TRUE
+- CREATEROLE = TRUE
+- CREATEDB = TRUE
+- REPLICATION = TRUE
+- BYPASSRLS = TRUE
+
+The otintel role is also the owner of the otintel database.
+
+Risk:
+The current application database account possesses privileges
+that can bypass normal database authorization controls.
+
+Using this account for application runtime operations creates
+unnecessary security exposure.
+
+Required Actions:
+- Create a separate, restricted application runtime role.
+- Separate application access from database administration.
+- Reserve privileged database access for controlled migrations
+  and administrative operations.
+- Prevent application roles from owning protected database
+  objects or bypassing authorization controls.
+- Do not use the current configuration with production data.
+
+Status:
+OPEN - REMEDIATION REQUIRED
+
+
+REVIEW 002 - CURRENT APPLICATION DATABASE ACCESS
+------------------------------------------------
+
+Purpose:
+Identify the database operations currently performed by the
+application and establish a baseline for least-privilege access.
+
+Source:
+Review of app.py database queries.
+
+Findings:
+The application currently performs the following operations:
+
+Table                  Operations
+-----------------------------------------
+public.clients         SELECT
+public.assets          SELECT, INSERT
+public.sites           SELECT, INSERT
+public.buildings       SELECT, INSERT
+public.cabinets        SELECT, INSERT
+public.backup_jobs     SELECT, INSERT
+
+These operations represent observed application behavior,
+not approved production permissions.
+
+Risk:
+The current application does not implement trusted user-level
+or client-level authorization.
+
+Without additional controls, database permissions alone do not
+establish which users may access or modify specific client data.
+
+Direct modification of asset cabinet assignments could also
+bypass the planned approval workflow.
+
+Required Actions:
+- Establish a restricted runtime database role.
+- Grant only the permissions required for approved operations.
+- Implement trusted user authentication.
+- Implement client-scoped authorization.
+- Prohibit direct asset cabinet updates by runtime roles.
+- Require controlled authorization for assignment approvals.
+- Keep assignment decisions disabled until the approval
+  workflow has been implemented and tested.
+- Separate backup submission authorization from ordinary
+  inventory management permissions.
+
+Status:
+REVIEWED - AUTHORIZATION NOT IMPLEMENTED
+
+
+REVIEW 003 - IDENTITY SEQUENCE PRIVILEGES
+----------------------------------------
+
+Purpose:
+Determine whether the application requires separate PostgreSQL
+sequence privileges when inserting database records.
+
+Source:
+PostgreSQL identity column metadata.
+
+Findings:
+The following columns use GENERATED ALWAYS AS IDENTITY:
+
+Table                  Identity Column
+-----------------------------------------
+public.assets          id
+public.backup_jobs     id
+public.buildings       id
+public.cabinets        id
+public.clients         id
+public.sites           id
+
+Ordinary INSERT operations into these tables do not require
+separate sequence privileges.
+
+Risk:
+Granting unnecessary sequence permissions would expand the
+application role's access beyond its operational requirements.
+
+Required Actions:
+- Do not grant blanket sequence privileges to runtime roles.
+- Grant table INSERT privileges only where required.
+- Justify any explicit sequence access separately.
+- Reevaluate sequence privileges if future migrations introduce
+  database objects requiring different sequence access.
+
+Status:
+REVIEWED - NO SEPARATE SEQUENCE GRANTS IDENTIFIED
+
+
+REVIEW 004 - RESTRICTED APPLICATION ROLE POLICY
+-----------------------------------------------
+
+Purpose:
+Define the proposed PostgreSQL permission boundaries for
+the application's restricted runtime database account.
+
+Source:
+Review 001 - Current Database Role Privileges
+Review 002 - Current Application Database Access
+Review 003 - Identity Sequence Privileges
+
+Findings:
+The proposed restricted application runtime role is:
+
+otintel_app
+
+This role has not been created or configured.
+
+The current application connects using the otintel database
+role, which has PostgreSQL superuser privileges.
+
+Proposed table permissions:
+
+Table                  Permissions
+-----------------------------------------
+public.clients         SELECT
+public.assets          SELECT, INSERT
+public.sites           SELECT, INSERT
+public.buildings       SELECT, INSERT
+public.cabinets        SELECT, INSERT
+public.backup_jobs     SELECT, INSERT
+
+These permissions reflect observed application operations.
+They are not approved production permissions.
+
+Risk:
+An application runtime account with excessive database
+privileges could bypass authorization controls, modify
+protected asset assignments, alter change-management
+records, or access data belonging to other clients.
+
+Database permissions alone do not establish user-level
+or client-level authorization.
+
+Required Actions:
+- Create a separate, restricted application runtime role.
+- Prohibit SUPERUSER, CREATEDB, CREATEROLE, REPLICATION,
+  and BYPASSRLS privileges.
+- Prevent runtime roles from owning the database or
+  protected database objects.
+- Prohibit CREATE privileges on the public schema.
+- Grant only the minimum required table permissions.
+- Do not grant blanket sequence privileges.
+- Prohibit direct UPDATE or DELETE on protected assets.
+- Prohibit direct UPDATE or DELETE on assignment requests.
+- Prohibit direct INSERT, UPDATE, or DELETE on assignment
+  revision records.
+- Prohibit direct INSERT, UPDATE, or DELETE on assignment
+  audit events.
+- Restrict execution of assignment decision functions
+  to explicitly authorized database roles.
+- Establish trusted application user authentication.
+- Enforce client-scoped authorization for database access.
+- Require independent reviewer authorization before
+  assignment decisions are permitted.
+- Separate backup authorization from ordinary inventory
+  management permissions.
+- Test allowed and denied operations using the restricted
+  application role.
+- Keep assignment decisions disabled until all required
+  security controls are implemented and verified.
+
+Implementation Status:
+- Restricted application role: NOT IMPLEMENTED
+- Least-privilege grants: NOT IMPLEMENTED
+- User authentication: NOT IMPLEMENTED
+- Client authorization: NOT IMPLEMENTED
+- Independent reviewer authorization: NOT IMPLEMENTED
+- Approval function authorization: NOT IMPLEMENTED
+- Database permission testing: NOT COMPLETED
+
+Status:
+OPEN - REMEDIATION REQUIRED
+
+------------------------------------------------------------
+REVIEW 005 - MIGRATION 003 COMPLETE-FILE SECURITY REVIEW
+------------------------------------------------------------
+
+Review Type: Static SQL source review
+Migration Status: IN DEVELOPMENT - NOT APPLIED
+Review Status: OPEN - REMEDIATION REQUIRED
+
+Scope:
+Complete review of the Migration 003 SQL source, including
+assignment requests, audit events, assignment revisions,
+functions, triggers, and proposed permission controls.
+
+Verified:
+- Eight function declarations are present.
+- Seven trigger declarations are present.
+- No explicit SECURITY DEFINER clauses were identified.
+- Assignment decisions remain explicitly disabled.
+- PUBLIC execution is revoked in the proposed decision function SQL.
+
+FINDING 001 - AUTHORIZATION BOUNDARY INCOMPLETE
+Application role permissions and trusted reviewer authorization
+are not implemented. Existing triggers do not establish a
+complete authorization boundary.
+
+FINDING 002 - DECISION TRANSACTIONS INCOMPLETE
+Approval and rejection transactions are not implemented.
+The decision function performs preliminary validation but
+does not update asset assignments, complete requests, or
+create the required audit and revision records.
+
+FINDING 003 - AUDIT CONSISTENCY NOT ENFORCED
+The schema prevents duplicate decision events and uses
+triggers to prevent ordinary audit-event updates and
+deletions. It does not guarantee that every submitted or
+completed request has a corresponding valid audit event.
+
+FINDING 004 - DEPLOYMENT AND TESTING OUTSTANDING
+Migration 003 has not been applied or tested against
+PostgreSQL. Database permissions, authorization controls,
+and transaction behavior require implementation and testing.
+
+Required Remediation:
+- Establish restricted application database permissions.
+- Implement trusted reviewer authorization.
+- Complete controlled approval and rejection transactions.
+- Enforce audit-event and revision consistency.
+- Validate security boundaries and transaction behavior.
+- Obtain approval before enabling assignment decisions.
+
+Final Review Status:
+OPEN - REMEDIATION REQUIRED
+
+Migration 003 must remain IN DEVELOPMENT - NOT APPLIED.
+Assignment decisions must remain disabled.
+
+-----------------------------------------------------------
+REVIEW 006 - DATABASE CREDENTIAL SEPARATION
+------------------------------------------------------------
+
+Current configuration:
+- PostgreSQL administrative role: otintel.
+- Streamlit application uses the administrative password variable.
+- Backup worker uses PGUSER=otintel.
+- Backup worker uses the administrative password variable.
+- The otintel role currently has superuser privileges.
+
+Required remediation:
+- Configure Streamlit to authenticate as otintel_app.
+- Configure the backup worker to authenticate as otintel_backup_worker.
+- Use separate credentials for each runtime role.
+- Keep administrative credentials out of runtime containers.
+- Review backup execution requirements before restricting
+  the backup worker's database privileges.
+- Test both services before changing deployed credentials.
+- Do not expose credentials in logs or command output.
+
+Status: OPEN - NOT IMPLEMENTED
+------------------------------------------------------------
+REVIEW 007 - LOCAL BACKUP WORKER SECURITY
+------------------------------------------------------------
+
+Current implementation:
+- Backup worker uses the postgres:17 base image.
+- Dockerfile does not specify a runtime USER.
+- Base image does not specify a default runtime user.
+- Backup worker therefore likely runs as root.
+- Backup files are stored in a local mounted directory.
+- Current backup implementation is for local development.
+
+Production requirements:
+- Replace or redesign the local backup implementation.
+- Use a dedicated non-root service account.
+- Use restricted PostgreSQL credentials.
+- Support secure server-side or off-site backup storage.
+- Define encryption, retention, and access controls.
+- Implement automated verification and restoration testing.
+
+Decision:
+- Defer backup architecture changes until web deployment.
+- Preserve existing local backup functionality.
+- Do not enable backup archiving during this review.
+
+Status: DOCUMENTED - PRODUCTION REMEDIATION REQUIRED
+
+------------------------------------------------------------
+REVIEW 008 - APPLICATION AUTHENTICATION BOUNDARY
+------------------------------------------------------------
+
+Current findings:
+- No authentication or session identity references were found
+  in app.py during the source inspection.
+- The application currently uses client selection without
+  authenticated user authorization.
+- Client selection must not be treated as proof of access.
+
+Required remediation:
+- Establish trusted authentication before request submission.
+- Assign each authenticated user a stable unique identifier.
+- Enforce client-scoped permissions on database operations.
+- Prevent callers from impersonating requesters or reviewers.
+- Require separate authorization for assignment approvals.
+- Prevent reviewers from approving their own requests.
+- Test authorization failures before enabling workflows.
+
+Decision:
+- Do not grant direct assignment request INSERT permissions.
+- Do not enable assignment approval functions.
+- Keep the current prototype restricted to development use.
+
+Status: OPEN - AUTHENTICATION NOT IMPLEMENTED
+
+------------------------------------------------------------
+REVIEW 009 - APPLICATION CLIENT ISOLATION
+------------------------------------------------------------
+
+Current findings:
+- app.py uses Streamlit client selection controls.
+- Inventory data is retrieved across clients before UI filtering.
+- Assignment asset queries filter by selected client name.
+- No authenticated user-to-client authorization is enforced.
+
+Required remediation:
+- Resolve permitted clients from trusted user identity.
+- Restrict database queries to authorized client IDs.
+- Verify authorization before every client-scoped write.
+- Prevent access through manipulated client parameters.
+- Test cross-client access using separate user identities.
+- Ensure restricted database credentials cannot bypass
+  authorization controls.
+
+Decision:
+- Existing dropdowns remain development UI controls only.
+- Do not treat client filtering as access enforcement.
+- Do not enable assignment submissions or approvals.
+
+Status: OPEN - CLIENT AUTHORIZATION NOT IMPLEMENTED
+
+------------------------------------------------------------
+REVIEW 010 - APPLICATION DATABASE CREDENTIALS
+------------------------------------------------------------
+
+Current findings:
+- app.py connects using database username otintel.
+- The password is loaded from POSTGRES_PASSWORD.
+- The database host is configured through DB_HOST.
+- The otintel database role currently has superuser privileges.
+- The application uses SQLAlchemy with psycopg.
+
+Required remediation:
+- Replace application superuser access with otintel_app.
+- Use a separate application database password.
+- Configure application credentials independently from
+  database administration and backup worker credentials.
+- Verify all required application database permissions.
+- Ensure client authorization cannot be bypassed.
+- Test application functionality with restricted privileges.
+
+Deployment restrictions:
+- Do not switch application credentials prematurely.
+- Do not grant otintel_app superuser privileges.
+- Do not reuse administrative credentials for application use.
+- Do not deploy until authorization testing is complete.
+
+Status: OPEN - CREDENTIAL SEPARATION NOT IMPLEMENTED
+
+------------------------------------------------------------
+REVIEW 011 - DATABASE FUNCTION EXECUTE PRIVILEGES
+------------------------------------------------------------
+
+Current findings:
+- Migration 003 defines eight PostgreSQL functions.
+- Seven functions are used by database triggers.
+- decide_asset_assignment explicitly revokes PUBLIC access.
+- Trigger functions have no explicit EXECUTE revocations.
+- PostgreSQL normally grants function EXECUTE to PUBLIC.
+
+Required remediation:
+- Review EXECUTE privileges for every Migration 003 function.
+- Explicitly restrict PUBLIC access where appropriate.
+- Keep approval function execution separately authorized.
+- Verify function ownership and role memberships.
+- Test effective permissions using restricted database roles.
+- Do not rely on application UI controls for authorization.
+
+Decision:
+- No approval function EXECUTE grants are authorized yet.
+- Function privilege changes require migration review.
+- Do not execute Migration 003 until testing is complete.
+
+Status: OPEN - FUNCTION PRIVILEGES REQUIRE REVIEW

@@ -33,3 +33,9 @@ backups/
 .vscode/
 .DS_Store
 Thumbs.dbok
+
+# Streamlit authentication credentials
+.streamlit/secrets.toml
+
+# Local migration backup files
+*.sql.bak
